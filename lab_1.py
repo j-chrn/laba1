@@ -15,7 +15,7 @@ class Income:
             f"Дата: {self.date.strftime('%Y.%m.%d')}\n"
             f"Источник: {self.source}\n"
             f"Сумма: {self.amount}\n"
-            f"Цвет: {self.color}\n"
+            f"Цвет: {self.color}"
         )
 
 
@@ -39,9 +39,39 @@ def parse_income(input_string):
 
 
 if __name__ == "__main__":
-    user_input = input(
-        "Введите данные в формате: Доход: ГГГГ.ММ.ДД \"Источник\" Сумма \"Цвет\"\n"
-    )
-    income = parse_income(user_input)
-    print()
-    print(income)
+    incomes = []
+
+    while True:
+        print("\nМеню:")
+        print("1 — Добавить доход")
+        print("2 — Вывести все доходы")
+        print("0 — Выход")
+
+        choice = input("Выберите действие: ")
+
+        if choice == "1":
+            user_input = input(
+                "Введите данные в формате:\n"
+                "Доход: ГГГГ.ММ.ДД \"Источник\" Сумма \"Цвет\"\n"
+            )
+            try:
+                income = parse_income(user_input)
+                incomes.append(income)
+                print("Доход добавлен.")
+            except:
+                print("Ошибка ввода")
+
+        elif choice == "2":
+            if not incomes:
+                print("Список доходов пуст.")
+            else:
+                print()
+                for income in incomes:
+                    print(income)
+
+        elif choice == "0":
+            print("Программа завершена.")
+            break
+
+        else:
+            print("Неверный выбор. Попробуйте снова.")
