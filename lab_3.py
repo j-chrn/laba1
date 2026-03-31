@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import shlex
+import os
 from datetime import datetime
 from typing import List
 
@@ -30,45 +31,66 @@ class IncomeFileReader:
         if not input_string.startswith(prefix):
             raise IncomeFormatError(f"Строка должна начинаться с '{prefix}'")
 
+        # Извлекаем данные после "Доход:"
         data = input_string[len(prefix):].strip()
+        
+        # --- ЛОГИКА ИЗ LAB_2: ПОДДЕРЖКА РАЗДЕЛИТЕЛЕЙ ---
         try:
-            parts = shlex.split(data)
+            if ';' in data:
+                # Разделяем по ; и очищаем от пробелов и лишних кавычек
+                parts = [p.strip().strip('"').strip("'") for p in data.split(';')]
+            else:
+                # Используем shlex для стандартного формата с пробелами
+                parts = shlex.split(data)
         except ValueError as e:
-            raise IncomeFormatError(f"Ошибка парсинга кавычек: {e}")
+            raise IncomeFormatError(f"Ошибка парсинга (возможно, не закрыты кавычки): {e}")
 
+        # Проверка количества полей
         if len(parts) != 4:
-            raise IncomeFormatError(f"Ожидалось 4 аргумента, получено {len(parts)}")
+            raise IncomeFormatError(f"Неверное количество полей: ожидалось 4, получено {len(parts)}")
 
         try:
+            # Преобразование типов данных
             date = datetime.strptime(parts[0], "%Y.%m.%d").date()
             amount = int(parts[2])
             return Income(date, parts[1], amount, parts[3])
         except ValueError as e:
-            raise IncomeFormatError(f"Ошибка преобразования типов: {e}")
+            # Если дата 31 апреля или сумма не число — кидаем ошибку формата
+            raise IncomeFormatError(f"Ошибка преобразования типов данных: {e}")
 
     @staticmethod
     def read_from_file(filepath: str) -> List[Income]:
         incomes = []
+        if not os.path.exists(filepath):
+            return incomes
+            
         try:
             with open(filepath, 'r', encoding='utf-8') as file:
                 for line_num, line in enumerate(file, 1):
                     line = line.strip()
-                    if not line: continue
+                    if not line: 
+                        continue
                     try:
                         incomes.append(IncomeFileReader.parse_income(line))
                     except IncomeError as e:
-                        # Логирование ошибок (в консоль или файл)
+                        # В Lab 3 ошибки выводятся в консоль как логи
                         print(f"[LOG][Строка {line_num}]: {e} | Содержимое: '{line}'")
-        except FileNotFoundError:
-            print(f"Файл {filepath} не найден")
+        except Exception as e:
+            print(f"Критическая ошибка при чтении файла: {e}")
+            
         return incomes
 
     @staticmethod
     def format_income(income: Income) -> str:
-        return f'Доход: {income.date.strftime("%Y.%m.%d")} {shlex.quote(income.source)} {income.amount} {shlex.quote(income.color)}'
+        """Форматирует объект для записи в файл (используем стандартный формат)."""
+        return f'Доход: {income.date.strftime("%Y.%m.%d")} "{income.source}" {income.amount} "{income.color}"'
 
     @staticmethod
     def write_to_file(filepath: str, incomes: List[Income]) -> None:
-        with open(filepath, 'w', encoding='utf-8') as file:
-            for inc in incomes:
-                file.write(IncomeFileReader.format_income(inc) + '\n')
+        """Сохраняет данные в файл."""
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                for inc in incomes:
+                    f.write(IncomeFileReader.format_income(inc) + '\n')
+        except Exception as e:
+            print(f"Ошибка при записи в файл: {e}")
